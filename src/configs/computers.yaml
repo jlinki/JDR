@@ -1,0 +1,193 @@
+gcn:
+  normalize_data: 'No'
+
+gprgnn:
+  normalize_data: 'No'
+  #normalize_data: 'Yes'
+  #lr: 0.05
+  #alpha: 0.5
+  #weight_decay: 0.0
+
+spectralclustering:
+
+gcn_denoise:
+  normalize_data: 'No'
+  denoise_non_binary: 'Yes'
+  denoise_iterations: 3
+  denoise_type: 'jointly'
+  rewired_index_A: 718
+  rewired_index_X: 975
+  rewired_ratio_A: 0.3977638045196389
+  rewired_ratio_X: 0.0205681934086257
+  rewired_ratio_X_non_binary: 0.06775205880630597
+  use_edge_attr: 'Yes'
+
+gprgnn_denoise:
+  normalize_data: 'No'
+  denoise_non_binary: 'Yes'
+  denoise_iterations: 3
+  denoise_type: 'jointly'
+  rewired_index_A: 718
+  rewired_index_X: 975
+  rewired_ratio_A: 0.3977638045196389
+  rewired_ratio_X: 0.0205681934086257
+  rewired_ratio_X_non_binary: 0.06775205880630597
+  use_edge_attr: 'Yes'
+
+spectralclustering_denoise:
+  normalize_data: 'No'
+  denoise_non_binary: 'Yes'
+  denoise_iterations: 3
+  denoise_type: 'jointly'
+  rewired_index_A: 718
+  rewired_index_X: 975
+  rewired_ratio_A: 0.3977638045196389
+  rewired_ratio_X: 0.0205681934086257
+  rewired_ratio_X_non_binary: 0.06775205880630597
+  use_edge_attr: 'Yes'
+
+gcn_denoise_gprgnn:
+  normalize_data: 'No'
+  denoise_non_binary: 'Yes'
+  denoise_iterations: 7
+  denoise_type: 'jointly'
+  rewired_index_A: 583
+  rewired_index_X: 1533
+  rewired_ratio_A: 0.4678799519728985
+  rewired_ratio_X: 0.06247119858009864
+  rewired_ratio_X_non_binary: 0.12721487463397496
+  use_edge_attr: 'Yes'
+
+gprgnn_denoise_gprgnn:
+  normalize_data: 'No'
+  denoise_non_binary: 'Yes'
+  denoise_iterations: 7
+  denoise_type: 'jointly'
+  rewired_index_A: 583
+  rewired_index_X: 1533
+  rewired_ratio_A: 0.4678799519728985
+  rewired_ratio_X: 0.06247119858009864
+  rewired_ratio_X_non_binary: 0.12721487463397496
+  use_edge_attr: 'Yes'
+
+spectralclustering_denoise_gprgnn:
+  normalize_data: 'No'
+  denoise_non_binary: 'Yes'
+  denoise_iterations: 7
+  denoise_type: 'jointly'
+  rewired_index_A: 583
+  rewired_index_X: 1533
+  rewired_ratio_A: 0.4678799519728985
+  rewired_ratio_X: 0.06247119858009864
+  rewired_ratio_X_non_binary: 0.12721487463397496
+  use_edge_attr: 'Yes'
+
+gcn_denoise_dense:
+  normalize_data: 'No'
+  denoise_non_binary: 'Yes'
+  denoise_iterations: 6
+  denoise_type: 'jointly'
+  rewired_index_A: 59
+  rewired_index_X: 1968
+  rewired_ratio_A: 0.43491210814257314
+  rewired_ratio_X: 0.027836251041223115
+  rewired_ratio_X_non_binary: 0.4172986037925067
+  use_edge_attr: 'Yes'
+
+gprgnn_denoise_dense:
+  normalize_data: 'No'
+  denoise_non_binary: 'Yes'
+  denoise_iterations: 6
+  denoise_type: 'jointly'
+  rewired_index_A: 59
+  rewired_index_X: 1968
+  rewired_ratio_A: 0.43491210814257314
+  rewired_ratio_X: 0.027836251041223115
+  rewired_ratio_X_non_binary: 0.4172986037925067
+  use_edge_attr: 'Yes'
+
+spectralclustering_denoise_dense:
+  normalize_data: 'No'
+  denoise_non_binary: 'Yes'
+  denoise_iterations: 6
+  denoise_type: 'jointly'
+  rewired_index_A: 59
+  rewired_index_X: 1968
+  rewired_ratio_A: 0.43491210814257314
+  rewired_ratio_X: 0.027836251041223115
+  rewired_ratio_X_non_binary: 0.4172986037925067
+  use_edge_attr: 'Yes'
+
+gcn_denoise_gprgnn_dense:
+  normalize_data: 'No'
+  denoise_non_binary: 'Yes'
+  denoise_iterations: 30
+  denoise_type: 'jointly'
+  rewired_index_A: 200
+  rewired_index_X: 1653
+  rewired_ratio_A: 0.030706914884366387
+  rewired_ratio_X: 0.03316622852500861
+  rewired_ratio_X_non_binary: 0.6706220865309668
+  use_edge_attr: 'Yes'
+
+gprgnn_denoise_gprgnn_dense:
+  normalize_data: 'No'
+  denoise_non_binary: 'Yes'
+  denoise_iterations: 30
+  denoise_type: 'jointly'
+  rewired_index_A: 200
+  rewired_index_X: 1653
+  rewired_ratio_A: 0.030706914884366387
+  rewired_ratio_X: 0.03316622852500861
+  rewired_ratio_X_non_binary: 0.6706220865309668
+  use_edge_attr: 'Yes'
+
+spectralclustering_denoise_gprgnn_dense:
+  normalize_data: 'No'
+  denoise_non_binary: 'Yes'
+  denoise_iterations: 30
+  denoise_type: 'jointly'
+  rewired_index_A: 200
+  rewired_index_X: 1653
+  rewired_ratio_A: 0.030706914884366387
+  rewired_ratio_X: 0.03316622852500861
+  rewired_ratio_X_non_binary: 0.6706220865309668
+  use_edge_attr: 'Yes'
+
+rewire_borf:
+  borf_num_iterations: 1
+  borf_batch_add: 20
+  borf_batch_remove: 40
+
+rewire_borf_gprgnn:
+  borf_num_iterations: 3
+  borf_batch_add: 20
+  borf_batch_remove: 30
+
+rewire_borf_dense:
+  borf_num_iterations: 1
+  borf_batch_add: 20
+  borf_batch_remove: 40
+
+rewire_borf_gprgnn_dense:
+  borf_num_iterations: 3
+  borf_batch_add: 20
+  borf_batch_remove: 30
+
+rewire_ppr_gcn:
+  rewire_alpha: 0.05
+rewire_ppr_gprgnn:
+  rewire_alpha: 0.65
+rewire_ppr_gcn_denoise:
+  rewire_alpha: 0.15
+rewire_ppr_gprgnn_denoise:
+  rewire_alpha: 0.3
+
+rewire_ppr_gcn_dense:
+  rewire_alpha: 0.05
+rewire_ppr_gprgnn_dense:
+  rewire_alpha: 0.6
+rewire_ppr_gcn_denoise_dense:
+  rewire_alpha: 0.1
+rewire_ppr_gprgnn_denoise_dense:
+  rewire_alpha: 0.65

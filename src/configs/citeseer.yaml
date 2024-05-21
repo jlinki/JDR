@@ -1,0 +1,190 @@
+gcn:
+  normalize_data: 'Yes'
+
+gprgnn:
+  normalize_data: 'Yes'
+
+spectralclustering:
+
+gcn_denoise:
+  normalize_data: 'Yes'
+  denoise_iterations: 15
+  denoise_non_binary: 'Yes'
+  denoise_type: 'jointly'
+  rewired_index_A: 578
+  rewired_index_X: 1330
+  rewired_ratio_A: 0.4596352300987843
+  rewired_ratio_X: 0.17275436574219966
+  rewired_ratio_X_non_binary: 0.04880971738128359
+  use_edge_attr: 'Yes'
+
+gprgnn_denoise:
+  normalize_data: 'Yes'
+  denoise_iterations: 15
+  denoise_non_binary: 'Yes'
+  denoise_type: 'jointly'
+  rewired_index_A: 578
+  rewired_index_X: 1330
+  rewired_ratio_A: 0.4596352300987843
+  rewired_ratio_X: 0.17275436574219966
+  rewired_ratio_X_non_binary: 0.04880971738128359
+  use_edge_attr: 'Yes'
+
+spectralclustering_denoise:
+  denoise_iterations: 15
+  denoise_non_binary: 'Yes'
+  denoise_type: 'jointly'
+  rewired_index_A: 578
+  rewired_index_X: 1330
+  rewired_ratio_A: 0.4596352300987843
+  rewired_ratio_X: 0.17275436574219966
+  rewired_ratio_X_non_binary: 0.04880971738128359
+  use_edge_attr: 'Yes'
+
+gcn_denoise_gprgnn:
+  normalize_data: 'Yes'
+  denoise_iterations: 4
+  denoise_non_binary: 'Yes'
+  denoise_type: 'jointly'
+  rewired_index_A: 1390
+  rewired_index_X: 1169
+  rewired_ratio_A: 0.3451751866240595
+  rewired_ratio_X: 0.0987221881894626
+  rewired_ratio_X_non_binary: 0.5845746613679074
+  use_edge_attr: 'Yes'
+
+gprgnn_denoise_gprgnn:
+  normalize_data: 'Yes'
+  denoise_iterations: 4
+  denoise_non_binary: 'Yes'
+  denoise_type: 'jointly'
+  rewired_index_A: 1390
+  rewired_index_X: 1169
+  rewired_ratio_A: 0.3451751866240595
+  rewired_ratio_X: 0.0987221881894626
+  rewired_ratio_X_non_binary: 0.5845746613679074
+  use_edge_attr: 'Yes'
+
+spectralclustering_denoise_gprgnn:
+  denoise_iterations: 4
+  denoise_non_binary: 'Yes'
+  denoise_type: 'jointly'
+  rewired_index_A: 1390
+  rewired_index_X: 1169
+  rewired_ratio_A: 0.3451751866240595
+  rewired_ratio_X: 0.0987221881894626
+  rewired_ratio_X_non_binary: 0.5845746613679074
+  use_edge_attr: 'Yes'
+
+gcn_denoise_dense:
+  normalize_data: 'Yes'
+  denoise_iterations: 13
+  denoise_non_binary: 'Yes'
+  denoise_type: 'jointly'
+  rewired_index_A: 1423
+  rewired_index_X: 711
+  rewired_ratio_A: 0.21902737354437007
+  rewired_ratio_X: 0.38937322929182633
+  rewired_ratio_X_non_binary: 0.004144969577105639
+  use_edge_attr: 'Yes'
+
+gprgnn_denoise_dense:
+  normalize_data: 'Yes'
+  denoise_iterations: 13
+  denoise_non_binary: 'Yes'
+  denoise_type: 'jointly'
+  rewired_index_A: 1423
+  rewired_index_X: 711
+  rewired_ratio_A: 0.21902737354437007
+  rewired_ratio_X: 0.38937322929182633
+  rewired_ratio_X_non_binary: 0.004144969577105639
+  use_edge_attr: 'Yes'
+
+spectralclustering_denoise_dense:
+  denoise_iterations: 13
+  denoise_non_binary: 'Yes'
+  denoise_type: 'jointly'
+  rewired_index_A: 1423
+  rewired_index_X: 711
+  rewired_ratio_A: 0.21902737354437007
+  rewired_ratio_X: 0.38937322929182633
+  rewired_ratio_X_non_binary: 0.004144969577105639
+  use_edge_attr: 'Yes'
+
+gcn_denoise_gprgnn_dense:
+  normalize_data: 'Yes'
+  denoise_iterations: 6
+  denoise_non_binary: 'Yes'
+  denoise_type: 'jointly'
+  rewired_index_A: 1587
+  rewired_index_X: 1938
+  rewired_ratio_A: 0.10160544316556797
+  rewired_ratio_X: 0.05315944422420432
+  rewired_ratio_X_non_binary: 0.07106136410656538
+  use_edge_attr: 'Yes'
+
+gprgnn_denoise_gprgnn_dense:
+  normalize_data: 'Yes'
+  denoise_iterations: 6
+  denoise_non_binary: 'Yes'
+  denoise_type: 'jointly'
+  rewired_index_A: 1587
+  rewired_index_X: 1938
+  rewired_ratio_A: 0.10160544316556797
+  rewired_ratio_X: 0.05315944422420432
+  rewired_ratio_X_non_binary: 0.07106136410656538
+  use_edge_attr: 'Yes'
+
+spectralclustering_denoise_gprgnn_dense:
+  denoise_iterations: 6
+  denoise_non_binary: 'Yes'
+  denoise_type: 'jointly'
+  rewired_index_A: 1587
+  rewired_index_X: 1938
+  rewired_ratio_A: 0.10160544316556797
+  rewired_ratio_X: 0.05315944422420432
+  rewired_ratio_X_non_binary: 0.07106136410656538
+  use_edge_attr: 'Yes'
+
+rewire_borf_original:
+  borf_num_iterations: 3
+  borf_batch_add: 20
+  borf_batch_remove: 10
+
+rewire_borf:
+  borf_num_iterations: 3
+  borf_batch_add: 50
+  borf_batch_remove: 40
+
+rewire_borf_gprgnn:
+  borf_num_iterations: 1
+  borf_batch_add: 20
+  borf_batch_remove: 50
+
+rewire_borf_dense:
+  borf_num_iterations: 3
+  borf_batch_add: 30
+  borf_batch_remove: 40
+
+rewire_borf_gprgnn_dense:
+  borf_num_iterations: 3
+  borf_batch_add: 10
+  borf_batch_remove: 50
+
+rewire_ppr_gcn:
+  rewire_alpha: 0.3
+rewire_ppr_gprgnn:
+  rewire_alpha: 0.45
+rewire_ppr_gcn_denoise:
+  rewire_alpha: 0.2
+rewire_ppr_gprgnn_denoise:
+  rewire_alpha: 0.45
+
+rewire_ppr_gcn_dense:
+  rewire_alpha: 0.6
+rewire_ppr_gprgnn_dense:
+  rewire_alpha: 0.5
+rewire_ppr_gcn_denoise_dense:
+  rewire_alpha: 0.25
+rewire_ppr_gprgnn_denoise_dense:
+  rewire_alpha: 0.25
