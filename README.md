@@ -5,11 +5,9 @@ The GNN code is based on the ICLR2021 paper Adaptive Universal Generalized PageR
 
 
 ## Baseline Methods
-Diffusion Improves Graph Learning (DIGL) [[Paper](https://proceedings.neurips.cc/paper/2019/hash/23c894276a2c5a16470e6a31f4618d73-Abstract.html)] [[Code](https://github.com/gasteigerjo/gdc)]
-
 Batch Ollivier-Ricci Flow (BORF) [[Paper](https://proceedings.mlr.press/v202/nguyen23c.html)] [[Code](https://github.com/Fsoft-AIC/Batch-Ollivier-Ricci-Flow/tree/main)]
 
-First-order spectral rewiring (FoSR) [[Paper](https://openreview.net/forum?id=3YjQfCLdrzz)] [[Code](https://github.com/kedar2/FoSR)]
+Diffusion Improves Graph Learning (DIGL) [[Paper](https://proceedings.neurips.cc/paper/2019/hash/23c894276a2c5a16470e6a31f4618d73-Abstract.html)] [[Code](https://github.com/gasteigerjo/gdc)]
 
 Approximate Message Passing - Belief Propagation (AMP-BP) [[Paper](https://openreview.net/forum?id=Pe6hldOUkw)] [[Code](https://gitlab.epfl.ch/spoc-idephics/csbm)]
 
@@ -20,6 +18,7 @@ Tested with Python 3.10.14 and PyTorch 2.0.1 (Cuda 11.8).
 pytorch
 pytorch-geometric
 numpy scipy matplotlib pyyaml
+
 ```
 Optional (if not used, use flag `--no-wandb_log` when running the code):
 ```
@@ -39,16 +38,13 @@ python train_model.py --dataset Cora --net GCN --data_split sparse --denoise_def
 ```
 
 ### Run Rewire Baselines on Cora
-```
-python train_model.py --dataset Cora --net GCN --data_split sparse --rewire_default ppr 
-```
-or
+
 ```
 python train_model.py --dataset Cora --net GCN --data_split sparse --rewire_default borf 
 ```
 or
 ```
-python train_model.py --dataset Cora --net GCN --data_split sparse --rewire_default fosr 
+python train_model.py --dataset Cora --net GCN --data_split sparse --rewire_default ppr 
 ```
 ### Reproduce the results of the paper:
 ```
@@ -60,16 +56,8 @@ source run_exp_table_1.sh
 ```
 source run_exp_table_2.sh
 ```
-```
-source run_exp_table_3.sh
-```
 
-# Datasets
-
-## Twitch-gamers
-The dataset is available at [Snap](http://snap.stanford.edu/data/twitch_gamers.html). 
-
-## cSBM
+# CSBM Datasets
 To create a new dataset go to folder `src` and run for example:
 ```
 python cSBM_dataset.py --phi 0.6 --name cSBM_phi_0.6 --root ../data/ --num_nodes 5000 --num_features 2000 --avg_degree 5 --epsilon 3.25
