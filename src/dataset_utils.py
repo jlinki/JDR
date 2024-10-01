@@ -10,6 +10,8 @@ from torch_geometric.datasets import Planetoid
 from torch_geometric.datasets import Amazon
 from torch_geometric.datasets import WikipediaNetwork
 from torch_geometric.datasets import Actor
+from torch_geometric.datasets import HeterophilousGraphDataset
+from torch_geometric.datasets import LINKXDataset
 from torch_sparse import coalesce
 from torch_geometric.data import InMemoryDataset, download_url, Data
 from torch_geometric.utils.undirected import to_undirected
@@ -209,7 +211,82 @@ def DataLoader(name, normalize_data):
                             name=name, transform=T.NormalizeFeatures())
         else:
             dataset = WebKB(root='../data/', name=name)
+    elif name == 'penn94':
+        dataset = LINKXDataset(root='../data/', name='penn94')
+    elif name == 'twitch-gamers':
+        dataset = TwitchGamers(root='../data/')
+        data = dataset.data
+        dataset.__num_classes__ = data.y.unique().shape[0]
+        data.train_mask = torch.zeros(data.x.shape[0], dtype=torch.bool)
+        data.val_mask = torch.zeros(data.x.shape[0], dtype=torch.bool)
+        data.test_mask = torch.zeros(data.x.shape[0], dtype=torch.bool)
+        dataset.data = data
+    elif name in ['roman-empire', 'amazon-ratings', "minesweeper", "tolokers", "questions"]:
+        if normalize_data:
+            dataset = HeterophilousGraphDataset(root='../data/', name=name, transform=T.Compose([T.ToUndirected(), T.NormalizeFeatures()]))
+        else:
+         dataset = HeterophilousGraphDataset(root='../data/', name=name, transform=T.ToUndirected())
     else:
         raise ValueError(f'dataset {name} not supported in dataloader')
 
     return dataset, dataset[0]
+
+
+class TwitchGamers(InMemoryDataset):
+    def __init__(self, root, name='twitch-gamers', transform=None, pre_transform=None):
+        self.name = name.lower()
+        assert self.name in ['twitch-gamers']
+
+        super(TwitchGamers, self).__init__(root, transform, pre_transform)
+        self.data, self.slices = torch.load(self.processed_paths[0])
+
+    @property
+    def raw_dir(self):
+        return osp.join(self.root, self.name, 'raw')
+
+    @property
+    def processed_dir(self):
+        return osp.join(self.root, self.name, 'processed')
+
+    @property
+    def raw_file_names(self):
+        return ['large_twitch_edges.csv', 'large_twitch_features.csv']
+
+    @property
+    def processed_file_names(self):
+        return 'data.pt'
+
+    def download(self):
+        pass
+
+    def process(self):
+        import pandas as pd
+        edges = pd.read_csv('../data/twitch-gamers/' + 'large_twitch_edges.csv')
+        nodes = pd.read_csv('../data/twitch-gamers/' + 'large_twitch_features.csv')
+        edge_index = torch.tensor(edges.to_numpy()).t().type(torch.LongTensor)
+        edge_index = to_undirected(edge_index)
+        label, features = load_twitch_gamer(nodes, "mature")
+        node_feat = torch.tensor(features, dtype=torch.float)
+        node_feat = node_feat - node_feat.mean(dim=0, keepdim=True)
+        node_feat = node_feat / node_feat.std(dim=0, keepdim=True)
+        data = Data(x=node_feat, edge_index=edge_index, y=torch.tensor(label))
+        data = data if self.pre_transform is None else self.pre_transform(data)
+        torch.save(self.collate([data]), self.processed_paths[0])
+
+    def __repr__(self):
+        return '{}()'.format(self.name)
+
+
+def load_twitch_gamer(nodes, task="dead_account"):
+    nodes = nodes.drop('numeric_id', axis=1)
+    nodes['created_at'] = nodes.created_at.replace('-', '', regex=True).astype(int)
+    nodes['updated_at'] = nodes.updated_at.replace('-', '', regex=True).astype(int)
+    one_hot = {k: v for v, k in enumerate(nodes['language'].unique())}
+    lang_encoding = [one_hot[lang] for lang in nodes['language']]
+    nodes['language'] = lang_encoding
+
+    if task is not None:
+        label = nodes[task].to_numpy()
+        features = nodes.drop(task, axis=1).to_numpy()
+
+    return label, features

@@ -1,0 +1,66 @@
+gcn:
+  normalize_data: 'No'
+  lr: 0.005
+  weight_decay: 0.0
+  dropout: 0.2
+  num_layers: 5
+  RPMAX: 10
+
+gprgnn:
+  normalize_data: 'No'
+  lr: 0.005
+  alpha: 1.0
+  weight_decay: 0.0
+  dprate: 0.2
+  K: 1
+  hidden: 256
+  RPMAX: 10
+
+gcn_denoise:
+  normalize_data: 'No'
+  lr: 0.005
+  weight_decay: 0.0
+  dropout: 0.2
+  num_layers: 5
+  abs_ordering: 'No'
+  denoise_iterations: 8
+  denoise_non_binary: 'Yes'
+  denoise_type: 'jointly'
+  rewired_index_A: 248
+  rewired_index_X: 284
+  rewired_ratio_A: 0.21753387312040295
+  rewired_ratio_X: 0.19867046594480975
+  rewired_ratio_X_non_binary: 0.8410212130704535
+  use_edge_attr: 'Yes'
+  RPMAX: 10
+
+gprgnn_denoise_gprgnn:
+  normalize_data: 'No'
+  lr: 0.005
+  alpha: 1.0
+  weight_decay: 0.0
+  dprate: 0.2
+  K: 1
+  hidden: 256
+  abs_ordering: 'No'
+  denoise_iterations: 2
+  denoise_non_binary: 'Yes'
+  denoise_type: 'jointly'
+  rewired_index_A: 89
+  rewired_index_X: 2
+  rewired_ratio_A: 0.9738154576306794
+  rewired_ratio_X: 0.10629533801385604
+  rewired_ratio_X_non_binary: 0.31136872531732673
+  use_edge_attr: 'Yes'
+  denoise_A_k: 34
+  RPMAX: 10
+
+rewire_ppr_gcn:
+  rewire_alpha: 0.05
+rewire_ppr_gprgnn:
+  rewire_alpha: 1.0
+
+rewire_fosr_gcn:
+  fosr_num_iterations: 700
+rewire_fosr_gprgnn:
+  fosr_num_iterations: 700

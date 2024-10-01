@@ -197,3 +197,13 @@ rewire_ppr_gcn_denoise_dense:
   rewire_alpha: 0.2
 rewire_ppr_gprgnn_denoise_dense:
   rewire_alpha: 0.75
+
+rewire_fosr_gcn:
+  fosr_num_iterations: 5
+rewire_fosr_gprgnn:
+  fosr_num_iterations: 500
+
+rewire_fosr_gcn_dense:
+  fosr_num_iterations: 25
+rewire_fosr_gprgnn_dense:
+  fosr_num_iterations: 250

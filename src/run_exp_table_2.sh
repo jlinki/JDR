@@ -7,10 +7,11 @@ do
   for dataset in Chameleon Squirrel Film Texas Cornell
   do
       python train_model.py --dataset $dataset --data_split dense --net $net --no-wandb_log
-      python train_model.py  --dataset $dataset --data_split dense --net $net --no-wandb_log --denoise_default $net
+      python train_model.py --dataset $dataset --data_split dense --net $net --no-wandb_log --rewire_default ppr
+      python train_model.py --dataset $dataset --data_split dense --net $net --no-wandb_log --rewire_default fosr
       if [ "$dataset" != "Squirrel" ]; then
         python train_model.py --dataset $dataset --data_split dense --net $net --no-wandb_log --rewire_default borf
       fi
-      python train_model.py --dataset $dataset --data_split dense --net $net --no-wandb_log --rewire_default ppr
+      python train_model.py  --dataset $dataset --data_split dense --net $net --no-wandb_log --denoise_default $net
   done
 done

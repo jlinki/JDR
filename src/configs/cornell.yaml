@@ -111,3 +111,8 @@ rewire_ppr_gcn_denoise:
   rewire_alpha: 0.95
 rewire_ppr_gprgnn_denoise:
   rewire_alpha: 0.0
+
+rewire_fosr_gcn:
+  fosr_num_iterations: 25
+rewire_fosr_gprgnn:
+  fosr_num_iterations: 5

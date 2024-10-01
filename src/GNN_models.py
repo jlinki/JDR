@@ -4,8 +4,7 @@ import numpy as np
 import torch.nn as nn
 
 from torch_geometric.nn.conv.gcn_conv import gcn_norm
-from torch.nn import Parameter
-from torch.nn import Linear
+from torch.nn import Parameter, Linear
 from torch_geometric.nn import GATConv, GCNConv, ChebConv
 from torch_geometric.nn import JumpingKnowledge
 from torch_geometric.nn import MessagePassing, APPNP
@@ -80,7 +79,10 @@ class GPRGNN(nn.Module):
     def __init__(self, dataset, args):
         super(GPRGNN, self).__init__()
         self.lin1 = Linear(dataset.num_features, args.hidden)
-        self.lin2 = Linear(args.hidden, dataset.num_classes)
+        if args.dataset.lower() in ['tolokers', 'minesweeper', 'questions']:
+            self.lin2 = Linear(args.hidden, 1)
+        else:
+            self.lin2 = Linear(args.hidden, dataset.num_classes)
 
         if args.ppnp == 'PPNP':
             self.prop1 = APPNP(args.K, args.alpha)
@@ -90,6 +92,7 @@ class GPRGNN(nn.Module):
         self.Init = args.Init
         self.dprate = args.dprate
         self.dropout = args.dropout
+        self.args = args
 
     def reset_parameters(self):
         self.prop1.reset_parameters()
@@ -104,11 +107,17 @@ class GPRGNN(nn.Module):
 
         if self.dprate == 0.0:
             x = self.prop1(x, edge_index, edge_weight=data.edge_attr)
-            return F.log_softmax(x, dim=1)
+            if self.args.dataset.lower() in ['tolokers', 'minesweeper', 'questions']:
+                return x.squeeze(1)
+            else:
+                return F.log_softmax(x, dim=1)
         else:
             x = F.dropout(x, p=self.dprate, training=self.training)
             x = self.prop1(x, edge_index, edge_weight=data.edge_attr)
-            return F.log_softmax(x, dim=1)
+            if self.args.dataset.lower() in ['tolokers', 'minesweeper', 'questions']:
+                return x.squeeze(1)
+            else:
+                return F.log_softmax(x, dim=1)
 
 
 class GCN_Net(nn.Module):
@@ -128,6 +137,48 @@ class GCN_Net(nn.Module):
         x = F.dropout(x, p=self.dropout, training=self.training)
         x = self.conv2(x, edge_index, edge_weight=data.edge_attr)
         return F.log_softmax(x, dim=1)
+
+
+class GCN_large(torch.nn.Module):
+    '''
+    GCN from Lim et al. (2021)
+    '''
+    def __init__(self, dataset, args):
+        super(GCN_large, self).__init__()
+
+        self.convs = torch.nn.ModuleList()
+        self.convs.append(GCNConv(dataset.num_features, args.hidden, cached=True))
+        self.bns = torch.nn.ModuleList()
+        if args.dataset.lower() in ['penn94']:
+            self.bns.append(torch.nn.Identity())
+        else:
+            self.bns.append(torch.nn.BatchNorm1d(args.hidden))
+        for _ in range(args.num_layers - 2):
+            self.convs.append(
+                GCNConv(args.hidden, args.hidden, cached=True))
+            if args.dataset.lower() in ['penn94']:
+                self.bns.append(torch.nn.Identity())
+            else:
+                self.bns.append(torch.nn.BatchNorm1d(args.hidden))
+        self.convs.append(GCNConv(args.hidden, dataset.num_classes, cached=True))
+
+        self.dropout = args.dropout
+
+    def reset_parameters(self):
+        for conv in self.convs:
+            conv.reset_parameters()
+        for bn in self.bns:
+            bn.reset_parameters()
+
+    def forward(self, data):
+        x, edge_index, edge_attr = data.x, data.edge_index, data.edge_attr
+        for i, conv in enumerate(self.convs[:-1]):
+            x = conv(x, edge_index, edge_weight=data.edge_attr)
+            x = self.bns[i](x)
+            x = F.relu(x)
+            x = F.dropout(x, p=self.dropout, training=self.training)
+        x = self.convs[-1](x, edge_index, edge_weight=data.edge_attr)
+        return x.log_softmax(dim=-1)
 
 
 class ChebNet(nn.Module):
@@ -251,3 +302,124 @@ class MLP(nn.Module):
     def forward(self, data):
         x = data.x
         return F.log_softmax(self.mlp(x), dim=1)
+
+
+# HeteroGNN from Platonov et al. (2023)
+
+class ResidualModuleWrapper(nn.Module):
+    def __init__(self, module, normalization, dim, **kwargs):
+        super().__init__()
+        self.normalization = normalization(dim)
+        self.module = module(dim=dim, **kwargs)
+
+    def forward(self, data, x):
+        x_res = self.normalization(x)
+        x_res = self.module(data, x_res)
+        x = x + x_res
+        return x
+
+
+class FeedForwardModule(nn.Module):
+    def __init__(self, dim, hidden_dim_multiplier, dropout, input_dim_multiplier=1, **kwargs):
+        super().__init__()
+        input_dim = int(dim * input_dim_multiplier)
+        hidden_dim = int(dim * hidden_dim_multiplier)
+        self.linear_1 = nn.Linear(in_features=input_dim, out_features=hidden_dim)
+        self.dropout_1 = nn.Dropout(p=dropout)
+        self.act = nn.GELU()
+        self.linear_2 = nn.Linear(in_features=hidden_dim, out_features=dim)
+        self.dropout_2 = nn.Dropout(p=dropout)
+
+    def forward(self, x):
+        x = self.linear_1(x)
+        x = self.dropout_1(x)
+        x = self.act(x)
+        x = self.linear_2(x)
+        x = self.dropout_2(x)
+
+        return x
+
+
+class GCNModule(MessagePassing):
+    def __init__(self, dim, hidden_dim_multiplier, dropout, **kwargs):
+        super(GCNModule, self).__init__(aggr='add', **kwargs)  # 'add' aggregation
+        self.feed_forward_module = FeedForwardModule(dim=dim,
+                                                     hidden_dim_multiplier=hidden_dim_multiplier,
+                                                     dropout=dropout)
+        self.conv = GCNConv(dim, dim)
+
+    def forward(self, data, x):
+        x = self.conv(x, data.edge_index, data.edge_attr)
+        x = self.feed_forward_module(x)
+        return x
+
+    def message(self, x_j, norm):
+        return norm.view(-1, 1) * x_j
+
+MODULES = {
+    'ResNet': [FeedForwardModule],
+    'GCN': [GCNModule],
+}
+
+
+NORMALIZATION = {
+    'None': nn.Identity,
+    'LayerNorm': nn.LayerNorm,
+    'BatchNorm': nn.BatchNorm1d
+}
+
+
+class HeteroGCN(nn.Module):
+    def __init__(self, dataset, args):
+
+        super().__init__()
+        model_name = 'GCN'
+        num_layers = args.num_layers
+        input_dim = dataset.num_features
+        hidden_dim = args.hidden
+        if args.dataset.lower() in ['tolokers', 'minesweeper', 'questions']:
+            output_dim = 1
+        else:
+            output_dim = dataset.num_classes
+        hidden_dim_multiplier = 1
+        num_heads = args.heads
+        normalization = 'LayerNorm'
+        dropout = args.dropout
+
+
+        normalization = NORMALIZATION[normalization]
+
+        self.input_linear = nn.Linear(in_features=input_dim, out_features=hidden_dim)
+        self.dropout = nn.Dropout(p=dropout)
+        self.act = nn.GELU()
+
+        self.residual_modules = nn.ModuleList()
+        for _ in range(num_layers):
+            for module in MODULES[model_name]:
+                residual_module = ResidualModuleWrapper(module=module,
+                                                        normalization=normalization,
+                                                        dim=hidden_dim,
+                                                        hidden_dim_multiplier=hidden_dim_multiplier,
+                                                        dropout=dropout)
+
+                self.residual_modules.append(residual_module)
+
+        self.output_normalization = normalization(hidden_dim)
+        self.output_linear = nn.Linear(in_features=hidden_dim, out_features=output_dim)
+        self.args = args
+
+    def forward(self, data):
+        x = self.input_linear(data.x)
+        x = self.dropout(x)
+        x = self.act(x)
+
+        for residual_module in self.residual_modules:
+            x = residual_module(data, x)
+
+        x = self.output_normalization(x)
+        x = self.output_linear(x)
+
+        if self.args.dataset.lower() in ['tolokers', 'minesweeper', 'questions']:
+            return x.squeeze(1)
+        else:
+            return F.log_softmax(x, dim=1)

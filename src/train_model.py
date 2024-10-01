@@ -1,7 +1,7 @@
 from dataset_utils import DataLoader
 from utils import *
 from GNN_models import *
-from denoise_jointly import denoise_jointly
+from denoise_jointly import denoise_jointly, denoise_jointly_large
 
 import argparse
 import torch
@@ -13,6 +13,7 @@ import numpy as np
 import scipy.stats as stats
 from torch_geometric.utils import to_dense_adj
 import torch_geometric.transforms as T
+from sklearn.metrics import roc_auc_score
 
 
 def RunExp(exp_i, args, dataset, data, Net, percls_trn, val_lb):
@@ -21,8 +22,10 @@ def RunExp(exp_i, args, dataset, data, Net, percls_trn, val_lb):
         model.train()
         optimizer.zero_grad()
         out = model(data)[data.train_mask]
-        nll = F.nll_loss(out, data.y[data.train_mask])
-        loss = nll
+        if args.dataset.lower() in ['minesweeper', 'tolokers', 'questions']:
+            loss = F.binary_cross_entropy_with_logits(out, data.y[data.train_mask].float())
+        else:
+            loss = F.nll_loss(out, data.y[data.train_mask])
         loss.backward()
 
         optimizer.step()
@@ -33,9 +36,14 @@ def RunExp(exp_i, args, dataset, data, Net, percls_trn, val_lb):
         logits, accs, losses, preds = model(data), [], [], []
         loss_name = ["train", "val", "test"]
         for index, (_, mask) in enumerate(data('train_mask', 'val_mask', 'test_mask')):
-            pred = logits[mask].max(1)[1]
-            acc = pred.eq(data.y[mask]).sum().item() / mask.sum().item()
-            loss = F.nll_loss(model(data)[mask], data.y[mask])
+            if args.dataset.lower() in ["minesweeper", "tolokers", "questions"]:
+                pred = logits[mask].squeeze()
+                acc = roc_auc_score(data.y[mask].cpu(), pred.detach().cpu())
+                loss = F.binary_cross_entropy_with_logits(logits[mask].squeeze(), data.y[mask].float())
+            else:
+                pred = logits[mask].max(1)[1]
+                acc = pred.eq(data.y[mask]).sum().item() / mask.sum().item()
+                loss = F.nll_loss(model(data)[mask], data.y[mask])
             if args.wandb_log:
                 if loss_name[index] != "test":
                     wandb.log({loss_name[index] + "_loss": loss, loss_name[index] + "_acc": acc * 100, "epoch": epoch})
@@ -50,8 +58,38 @@ def RunExp(exp_i, args, dataset, data, Net, percls_trn, val_lb):
     else:
         device = torch.device('cpu')
 
-    permute_masks = random_planetoid_splits
-    data = permute_masks(data, dataset.num_classes, exp_i+args.run_num, percls_trn, val_lb)
+    if args.dataset.lower() in ['twitch-gamers']:
+        data.train_mask, data.val_mask, data.test_mask = rand_train_test_idx(
+            data, train_prop=args.train_rate, valid_prop=args.val_rate, curr_seed=exp_i + args.run_num)
+
+    elif args.dataset.lower() in ['penn94']:
+        if args.original_split:
+            if exp_i == 0:
+                data.train_mask_arr = copy.deepcopy(dataset.data.train_mask)
+                data.val_mask_arr = copy.deepcopy(dataset.data.val_mask)
+                data.test_mask_arr = copy.deepcopy(dataset.data.test_mask)
+            data.train_mask = data.train_mask_arr[:, exp_i % 5]
+            data.val_mask = data.val_mask_arr[:, exp_i % 5]
+            data.test_mask = data.test_mask_arr[:, exp_i % 5]
+        else:
+            data.train_mask, data.val_mask, data.test_mask = rand_train_test_idx(
+                data, train_prop=args.train_rate, valid_prop=args.val_rate, curr_seed=exp_i + args.run_num)
+
+    elif args.dataset.lower() in ['roman-empire', 'amazon-ratings', 'minesweeper', 'tolokers', 'questions']:
+        if args.original_split:
+            if exp_i == 0:
+                data.train_mask_arr = copy.deepcopy(dataset.data.train_mask)
+                data.val_mask_arr = copy.deepcopy(dataset.data.val_mask)
+                data.test_mask_arr = copy.deepcopy(dataset.data.test_mask)
+            data.train_mask = data.train_mask_arr[:, exp_i % 10]
+            data.val_mask = data.val_mask_arr[:, exp_i % 10]
+            data.test_mask = data.test_mask_arr[:, exp_i % 10]
+        else:
+            permute_masks = random_planetoid_splits
+            data = permute_masks(data, dataset.num_classes, exp_i + args.run_num, percls_trn, val_lb)
+    else:
+        permute_masks = random_planetoid_splits
+        data = permute_masks(data, dataset.num_classes, exp_i + args.run_num, percls_trn, val_lb)
 
     model, data = appnp_net.to(device), data.to(device)
 
@@ -190,10 +228,13 @@ if __name__ == '__main__':
     parser.add_argument('--hidden', type=int, default=64, help="Number of hidden units in the GNN")
     parser.add_argument('--dropout', type=float, default=0.5, help="Dropout rate for training")
     parser.add_argument('--num_layers', type=int, default=2, help="Number of layers in the GNN")
-    parser.add_argument('--data_split', default='sparse', choices=['sparse', 'dense', 'gdl', 'sparse5'],
+    parser.add_argument('--data_split', default='sparse', choices=['sparse', 'dense', 'gdl', 'sparse5', 'half'],
                         help="sparse means 0.025 for train/val, dense means 0.6/0.2")
     parser.add_argument('--set_seed', default=True, action=argparse.BooleanOptionalAction,
                         help="Set seed for reproducibility")
+    parser.add_argument('--original_split', type=str,
+                        choices=['Yes', 'No'],
+                        default='Yes', help="Use original split from dataset")
 
     # GPRGNN specific hyperparameters
     parser.add_argument('--K', type=int, default=10, help="Number of hops (filter order) for GPRGNN")
@@ -304,10 +345,10 @@ if __name__ == '__main__':
 
     # other rewire methods
     parser.add_argument('--rewire', type=str, default='none',
-                        choices=['none', 'ppr', 'heat', 'borf', 'borf4', 'borf5', 'knn', 'knn_weighted', 'heat_eps', 'ppr_eps'],
+                        choices=['none', 'ppr', 'heat', 'fosr', 'borf', 'borf4', 'borf5', 'knn', 'knn_weighted', 'heat_eps', 'ppr_eps'],
                         help="Chosse a rewiring method")
     parser.add_argument('--rewire_default', type=str,
-                        choices=['No', 'borf', 'borf_gprgnn', 'ppr'],
+                        choices=['No', 'fosr', 'borf', 'borf_gprgnn', 'ppr'],
                         default='No', help="Use default parameters for rewiring from yaml")
     parser.add_argument('--rewire_knn', type=int,
                         default=64, help="Number of nearest neighbors for knn rewiring")
@@ -321,7 +362,8 @@ if __name__ == '__main__':
     parser.add_argument('--normalization_in', type=str, default='sym', help="Normalization in for DIGL")
     parser.add_argument('--normalization_out', type=str, default=None, help="Normalization out for DIGL")
 
-    # BORF
+    # BORF and FoSR
+    parser.add_argument('--fosr_num_iterations', type=int, default=50, help="Number of rewire iterations for BORF")
     parser.add_argument('--borf_num_iterations', type=int, default=3, help="Number of rewire iterations for BORF")
     parser.add_argument('--borf_batch_add', type=int, default=20,
                         help="Number of edges to add in each iteration for BORF")
@@ -357,11 +399,14 @@ if __name__ == '__main__':
     elif args.data_split == "dense":
         args.train_rate = 0.6
         args.val_rate = 0.2
+    elif args.data_split == "half":
+        args.train_rate = 0.5
+        args.val_rate = 0.25
 
     # wandb
     if args.wandb_log:
         import wandb
-        wandb.init(project="Mutual_Denoising", config=args)
+        wandb.init(project="JDR", config=args)
         args = argparse.Namespace(**wandb.config)
     if args.use_yaml:
         if args.rewire_index_offset != 0:
@@ -386,7 +431,12 @@ if __name__ == '__main__':
     # nets
     gnn_name = args.net
     if gnn_name == 'GCN':
-        Net = GCN_Net
+        if args.dataset.lower() in ['twitch-gamers', 'penn94']:
+            Net = GCN_large
+        elif args.dataset.lower() in ['roman-empire', 'amazon-ratings', 'minesweeper', 'tolokers', 'questions']:
+            Net = HeteroGCN
+        else:
+            Net = GCN_Net
     elif gnn_name == 'GAT':
         Net = GAT_Net
     elif gnn_name == 'APPNP':
@@ -420,7 +470,7 @@ if __name__ == '__main__':
         dataset.data = data
 
     # Random sorting of the nodes
-    if args.random_sort:
+    if args.random_sort and (args.dataset.lower() not in ['twitch-gamers', 'penn94']):
         data = random_sort_nodes(data)
         dataset.data = data
 
@@ -483,7 +533,10 @@ if __name__ == '__main__':
                 if args.rewired_index_X > len(data.y):
                     args.rewired_index_X = len(data.y)
                 print(f"rewire_index is too large, set to the maximum value {args.rewire_index}")
-            data = denoise_jointly(data, args, device)
+            if args.dataset.lower() in ['questions', 'twitch-gamers', 'penn94']:
+                data = denoise_jointly_large(data, args, 'cpu')
+            else:
+                data = denoise_jointly(data, args, device)
             if args.show_class_dist:
                 plot_class_dist(data.cpu())
         else:
@@ -640,6 +693,18 @@ if __name__ == '__main__':
             wandb.run.summary["edges/rewired"] = (A_knn == 1).sum().item()
             wandb.run.summary["edges/add"] = ((adj_pre - A_knn) == -1).sum().item()
             wandb.run.summary["edges/remove"] = ((adj_pre - A_knn) == 1).sum().item()
+    elif args.rewire == 'fosr':
+        adj_pre = to_dense_adj(data.edge_index)[0]
+        from preprocessing import fosr
+        edge_index, _, _ = fosr.edge_rewire(dataset.data.edge_index.numpy(), num_iterations=args.fosr_num_iterations)
+        dataset.data.edge_index = torch.tensor(edge_index)
+        if args.dataset.lower() not in ['questions', 'twitch-gamers', 'penn94']:
+            adj_sdrf = to_dense_adj(data.edge_index)[0]
+            if args.wandb_log:
+                wandb.run.summary["edges/original"] = (adj_pre == 1).sum().item()
+                wandb.run.summary["edges/rewired"] = (adj_sdrf == 1).sum().item()
+                wandb.run.summary["edges/add"] = ((adj_pre - adj_sdrf) == -1).sum().item()
+                wandb.run.summary["edges/remove"] = ((adj_pre - adj_sdrf) == 1).sum().item()
     elif args.rewire == "none":
         pass
     else:

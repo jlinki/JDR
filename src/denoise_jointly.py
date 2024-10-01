@@ -308,3 +308,162 @@ def denoise_jointly(data, args, device):
         print("Alignment of X and A: ", compute_alignment(X, A, args))
         print("Alignment of X_denoised and A_denoised: ", compute_alignment(X_denoised, A_denoised, args))
     return new_data
+
+
+def denoise_jointly_large(data, args, device):
+    """
+    Denoises a large graph jointly using the given arguments and truncated SVD/eigsh
+    Args:
+        data: PyG data object
+        args: arguments from argparse
+        device: device to run the operations on (cuda or cpu)
+
+    Returns: denoised PyG data object
+    """
+    import scipy.sparse.linalg as sp_linalg
+    offset = args.denoise_offset
+    X = data.x
+    A = torch_geometric.utils.to_dense_adj(edge_index=data.edge_index)[0]
+    non_binary = args.denoise_non_binary
+
+    # Main loop for denoising
+    for iteration in tqdm(range(args.denoise_iterations), desc="Denoising"):
+        # Decomposition
+        VX, s, U = sp_linalg.svds(X.numpy(), k=args.rewired_index_X)
+        VX = torch.tensor(VX.copy())
+        s = torch.tensor(s.copy())
+        U = torch.tensor(U.copy())
+        sort_idx_X = torch.argsort(s, descending=True)
+        VX = VX[:, sort_idx_X]
+        s = s[sort_idx_X]
+        U = U[sort_idx_X, :]
+        if args.abs_ordering:
+            la, VA = sp_linalg.eigsh(A.numpy(), k=(args.rewired_index_A+offset))
+            la = torch.tensor(la.copy())
+            VA = torch.tensor(VA.copy())
+        else:
+            la, VA = sp_linalg.eigsh(A.numpy(), k=2*(args.rewired_index_A+offset))
+            la = torch.tensor(la.copy())
+            VA = torch.tensor(VA.copy())
+            sort_idx_A = torch.argsort(la, descending=True)
+            la = la[sort_idx_A]
+            VA = VA[:, sort_idx_A]
+            la = la[:args.rewired_index_A]
+            VA = VA[:, :len(la)]
+        N = A.shape[0]
+
+        # Denoise the node features X first
+        VX_new = copy.deepcopy(VX).to(device)
+        for i in range(args.rewired_index_X):
+            vx = copy.deepcopy(VX[:, i]).to(device)
+            va = VA[:, offset:args.rewired_index_A+offset].to(device)
+            overlap = torch.matmul(vx, va)
+            maxoverlap_index = torch.argmax(torch.abs(overlap))-offset
+            maxoverlap = overlap[maxoverlap_index]
+            VX_new[:, i] = (vx * (1 - args.rewired_ratio_X) + VA[:, maxoverlap_index].to(device)
+                            * args.rewired_ratio_X * torch.sign(maxoverlap))
+
+        SI = torch.zeros(args.rewired_index_X, args.rewired_index_X)
+        SI[range(min(U.shape[0], VX.shape[0])), range(min(U.shape[0], VX.shape[0]))] = s
+        new_X = X - VX @ SI @ U + VX_new.cpu() @ SI @ U
+
+        # Sparsify the node features X by thresholding or top-k if needed
+        if args.use_node_attr:
+            if iteration == args.denoise_iterations - 1:
+                if args.denoise_X_k > 0:
+                    flip_X = get_top_k_features(new_X, k=args.denoise_X_k)
+                else:
+                    flip_X = get_clipped_features(new_X, eps=args.denoise_X_eps)
+            else:
+                flip_X = new_X
+
+        # Otherwise, flip a certain amount of the node features X if needed or just keep the new features
+        else:
+            if iteration == args.denoise_iterations - 1:
+                if non_binary:
+                    flip_X = (1 - args.rewired_ratio_X_non_binary) * X + args.rewired_ratio_X_non_binary * new_X
+                elif X[X == 1].sum() == X[X > 0].sum():
+                    non_binary = False
+                    flip_X = copy.deepcopy(X).to(device)
+                    if args.flip_number_X_1 > 0:
+                        mask1 = (X == 1).to(device)
+                        topk = find_largest((X - new_X) * mask1, args.flip_number_X_1)
+                        flip_X[mask1 & ((X - new_X) >= topk)] = 0
+                    if args.flip_number_X_0 > 0:
+                        mask0 = (X == 0).to(device)
+                        topk = find_largest((new_X - X) * mask0, args.flip_number_X_0)
+                        flip_X[mask0 & ((new_X - X) >= topk)] = 1
+                else:
+                    non_binary = True
+                    print(f"Using non-binary denoising for features with rate {args.rewired_ratio_X_non_binary}")
+                    flip_X = (1-args.rewired_ratio_X_non_binary) * X + args.rewired_ratio_X_non_binary * new_X
+            else:
+                flip_X = new_X
+
+        if args.denoise_x:
+            X = copy.deepcopy(flip_X)
+            del flip_X, new_X
+        # Denoise the adjacency matrix A
+        VA_new = copy.deepcopy(VA).to(device)
+        for i in range(offset, args.rewired_index_A+offset):
+            va = copy.deepcopy(VA[:, i]).to(device)
+            vx = VX[:, :args.rewired_index_A].to(device)
+            overlap = torch.matmul(va, vx)
+            maxoverlap_index = torch.argmax(torch.abs(overlap))
+            maxoverlap = overlap[maxoverlap_index]
+            VA_new[:, i] = (va * (1 - args.rewired_ratio_A) + VX[:, maxoverlap_index].to(device)
+                            * args.rewired_ratio_A * torch.sign(maxoverlap))
+        new_A = A + VA_new.cpu() @ torch.diag(la) @ VA_new.cpu().T - VA @ torch.diag(la) @ VA.T
+
+        # Sparsify by threshold or top-k the adjacency matrix A if needed and build a weighted A
+        if args.use_edge_attr:
+            if iteration == args.denoise_iterations - 1:
+                if args.denoise_A_k > 0:
+                    flip_A = get_top_k_matrix(new_A, k=args.denoise_A_k)
+                elif args.denoise_A_eps > 0:
+                    flip_A = get_clipped_matrix(new_A, eps=args.denoise_A_eps)
+            else:
+                flip_A = new_A
+
+        # Otherwise filp a certain amount of A to stay binary
+        else:
+            if iteration == args.denoise_iterations - 1:
+                flip_A = copy.deepcopy(A).to(device)
+                if args.flip_number_A_1 > 0:
+                    mask1 = (A == 1).to(device)
+                    topk = find_largest((A - new_A) * mask1, args.flip_number_A_1)
+                    flip_A[mask1 & ((A - new_A) >= topk)] = 0
+
+                if args.flip_number_A_0 > 0:
+                    mask0 = (A == 0).to(device)
+                    topk = find_largest((new_A - A) * mask0, args.flip_number_A_0)
+                    flip_A[mask0 & ((new_A - A) >= topk)] = 1
+            else:
+                flip_A = new_A
+
+        # Update the node features and adjacency matrix if flags are True
+        if args.denoise_A:
+            A = copy.deepcopy(flip_A)
+        del VX, s, U, la, VA, VX_new, VA_new, new_A, flip_A, va, vx
+
+    # Otherwise just keep the original data
+    if not args.denoise_A:
+        A = copy.deepcopy(A)
+    if not args.denoise_x:
+        X = copy.deepcopy(X)
+
+    # Create a new data object with the denoised features and adjacency matrix
+    if args.use_edge_attr:
+        new_data = Data(x=X, edge_index=torch_geometric.utils.dense_to_sparse(A)[0],
+                        edge_attr=torch_geometric.utils.dense_to_sparse(A)[1], y=data.y, train_mask=data.train_mask, val_mask=data.val_mask, test_mask=data.test_mask).to(device)
+    else:
+        new_data = Data(x=X, edge_index=torch_geometric.utils.dense_to_sparse(A)[0],
+                        y=data.y, train_mask=data.train_mask, val_mask=data.val_mask, test_mask=data.test_mask).to(device)
+
+    # Log or print the results
+    if args.wandb_log:
+        import wandb
+        wandb.run.summary["edges/denoised"] = (A != 0).sum().item()
+    else:
+        print("Number of edges denoised A: ", (A != 0).sum().item())
+    return new_data

@@ -23,14 +23,14 @@ gcn_denoise:
   lr: 0.05
   weight_decay: 0.0
   abs_ordering: 'Yes'
-  denoise_iterations: 7
+  denoise_iterations: 3
   denoise_non_binary: 'Yes'
   denoise_type: 'jointly'
-  rewired_index_A: 41
-  rewired_index_X: 1099
-  rewired_ratio_A: 0.06613668867536887
-  rewired_ratio_X: 0.37461080303027305
-  rewired_ratio_X_non_binary: 0.974530930615391
+  rewired_index_A: 31
+  rewired_index_X: 1331
+  rewired_ratio_A: 0.06337266481028064
+  rewired_ratio_X: 0.48562572918265784
+  rewired_ratio_X_non_binary: 0.7551766260096617
   use_edge_attr: 'Yes'
 
 gprgnn_denoise:
@@ -131,3 +131,8 @@ rewire_ppr_gcn_denoise:
   rewire_alpha: 0.55
 rewire_ppr_gprgnn_denoise:
   rewire_alpha: 0.4
+
+rewire_fosr_gcn:
+  fosr_num_iterations: 10
+rewire_fosr_gprgnn:
+  fosr_num_iterations: 5

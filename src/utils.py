@@ -363,3 +363,35 @@ def compute_alignment(X: torch.tensor, A: torch.tensor, args, ord=2):
         VA = VA[:, -rewired_index:]
     alignment = torch.linalg.norm(torch.matmul(VX.T, VA), ord=ord)
     return alignment.item()
+
+def rand_train_test_idx(data, train_prop=.5, valid_prop=.25, curr_seed=0):
+    """ randomly splits label into train/valid/test splits """
+
+    def index_to_mask(index, size):
+        mask = torch.zeros(size, dtype=torch.bool, device=index.device)
+        mask[index] = 1
+        return mask
+
+
+    labeled_nodes = torch.where(data.y != -1)[0]
+    n = labeled_nodes.shape[0]
+    train_num = int(n * train_prop)
+    valid_num = int(n * valid_prop)
+
+    torch.manual_seed(curr_seed)
+    perm = torch.randperm(n)
+
+    train_indices = perm[:train_num]
+    val_indices = perm[train_num:train_num + valid_num]
+    test_indices = perm[train_num + valid_num:]
+
+
+    train_indices = labeled_nodes[train_indices]
+    val_indices = labeled_nodes[val_indices]
+    test_indices = labeled_nodes[test_indices]
+
+    train_mask = index_to_mask(train_indices, size=data.num_nodes)
+    val_mask = index_to_mask(val_indices, size=data.num_nodes)
+    test_mask = index_to_mask(test_indices, size=data.num_nodes)
+
+    return train_mask, val_mask, test_mask

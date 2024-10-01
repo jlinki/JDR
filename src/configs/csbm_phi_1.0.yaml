@@ -44,16 +44,12 @@ spectralclustering_denoise:
   denoise_offset: 1
   rewired_ratio_X_non_binary: 1.0
 
-mlp_denoise:
-  denoise_iterations: 80
-  denoise_A: "No"
-  rewired_ratio_X: 1.0
-  use_edge_attr: "Yes"
-  rewired_index_X: 1
-  denoise_offset: 1
-  rewired_ratio_X_non_binary: 1.0
-
 rewire_ppr_gcn:
   rewire_alpha: 0.05
 rewire_ppr_gprgnn:
   rewire_alpha: 0.05
+
+rewire_fosr_gcn:
+  fosr_num_iterations: 1000
+rewire_fosr_gprgnn:
+  fosr_num_iterations: 5
