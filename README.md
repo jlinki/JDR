@@ -23,7 +23,7 @@ numpy scipy matplotlib pyyaml
 ```
 For FoSR and BORF baseline:
 ```
-mamba pandas networkx GraphRicciCurvature
+numba pandas networkx GraphRicciCurvature
 ```
 Optional (if not used, use flag `--no-wandb_log` when running the code):
 ```
