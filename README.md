@@ -62,6 +62,43 @@ source run_exp_table_1.sh
 source run_exp_table_2.sh
 ```
 
+# How to use this ...
+
+## ...with my own GNN
+Add your GNN to `src/GNN_models.py` and adapt the argparse in `src/train_model.py` accordingly. Then you can test the performance of JDR with you GNN e.g. on Cora via
+```
+python train_model.py --dataset Cora --net "your GNN" --data_split sparse --denoise_default GCN 
+```
+Consider also optimizing the hyperparameters of JDR for your specific model+datasets combination as described below.
+## ...with my own dataset
+Add your dataset to the `DataLoader` in `src/dataset_utils.py`and adapt argparse in `src/train_model.py` accordingly. Since no default hyperparameters exist you need to tune them yourself. Here is a suggestion on the ranges based on our findings on the other datasets:
+```
+denoise_iterations:
+  distribution: int_uniform
+  max: 30
+  min: 1
+rewired_index_A:
+  distribution: int_uniform
+  max: 100
+  min: 1
+rewired_index_X:
+  distribution: int_uniform
+  max: 100
+  min: 1
+rewired_ratio_A:
+  distribution: uniform
+  max: 0.5
+  min: 0
+rewired_ratio_X:
+  distribution: uniform
+  max: 0.5
+  min: 0
+rewired_ratio_X_non_binary:
+  distribution: uniform
+  max: 1
+  min: 0
+```
+
 # Datasets
 ## Twitch-gamers
 The dataset can be downloaded from [Snap](http://snap.stanford.edu/data/twitch_gamers.html).
@@ -73,7 +110,15 @@ python cSBM_dataset.py --phi 0.6 --name cSBM_phi_0.6 --root ../data/ --num_nodes
 ```
 
 
+# Citation
 
+If you find our work useful, please consider citing:
 
-
-
+```bibtex
+@inproceedings{linkerhagner2025joint,
+  title={Joint Graph Rewiring and Feature Denoising via Spectral Resonance},
+  author={Jonas Linkerh{\"a}gner and Cheng Shi and Ivan Dokmani{\'c}},
+  booktitle={The Thirteenth International Conference on Learning Representations},
+  year={2025},
+  url={https://openreview.net/forum?id=zBbZ2vdLzH}
+}
