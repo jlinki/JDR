@@ -1,6 +1,7 @@
 # Joint Denoising and Rewiring
 
-This repository contains the code for the paper "Joint Graph Rewiring and Feature Denoising via Spectral Alignment".
+This repository contains the code for the ICLR2025 [[Paper]](https://openreview.net/forum?id=zBbZ2vdLzH) "Joint Graph Rewiring and Feature Denoising via Spectral Alignment".
+
 The GNN code is based on the ICLR2021 paper Adaptive Universal Generalized PageRank Graph Neural Network [[Paper](https://openreview.net/forum?id=n6jl7fLxrP)] [[Code](https://github.com/jianhao2016/GPRGNN)].
 
 
